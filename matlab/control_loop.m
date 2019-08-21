@@ -1,17 +1,6 @@
-function control_loop(camera)
+function control_loop(Data)
     tic;
     fprintf('Executing loop...\n');
-    
-    % TODO: get image
-    [~, MemId] = camera.Memory.Allocate(true);
-    [~, Width, Height, Bits, ~] = camera.Memory.Inquire(MemId);
-    camera.Acquisition.Freeze(uc480.Defines.DeviceParameter.Wait);
-    [~, tmp] = camera.Memory.CopyToArray(MemId);
-    fprintf('Image captured');
-    Data = reshape(uint8(tmp), [Bits/8, Width, Height]);
-    Data = Data(1:3, 1:Width, 1:Height);
-    Data = permute(Data, [3,2,1]);
-    himg = imshow(Data);
     
    
 %     % find Gaussian center
