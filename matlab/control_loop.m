@@ -1,4 +1,4 @@
-function control_loop()
+function control_loop(camera)
     tic;
     fprintf('Executing loop...\n');
     
@@ -7,21 +7,23 @@ function control_loop()
     [~, Width, Height, Bits, ~] = camera.Memory.Inquire(MemId);
     camera.Acquisition.Freeze(uc480.Defines.DeviceParameter.Wait);
     [~, tmp] = camera.Memory.CopyToArray(MemId);
+    fprintf('Image captured');
     Data = reshape(uint8(tmp), [Bits/8, Width, Height]);
     Data = Data(1:3, 1:Width, 1:Height);
     Data = permute(Data, [3,2,1]);
     himg = imshow(Data);
     
-    % find Gaussian center
-    coeffs = fmin_gaussian(Data, 1);
-    y = coeffs(1);
-    hold on;
-    plot(coeffs(1), coeffs(2), 'r.','MarkerSize', 10);
-    ang = 0:pi/64:2*pi;
-    r = 2*coeffs(3); % 2 std devs
-    circle_x = r*cos(ang) + coeffs(1);
-    circle_y = r*sin(ang) + coeffs(2);
-    plot(circle_x, circle_y, 'r');
+   
+%     % find Gaussian center
+%     coeffs = fmin_gaussian(Data, 1);
+%     y = coeffs(1);
+%     hold on;
+%     plot(coeffs(1), coeffs(2), 'r.','MarkerSize', 10);
+%     ang = 0:pi/64:2*pi;
+%     r = 2*coeffs(3); % 2 std devs
+%     circle_x = r*cos(ang) + coeffs(1);
+%     circle_y = r*sin(ang) + coeffs(2);
+%     plot(circle_x, circle_y, 'r');
     
 %     % control system
 %     kp = -1;
