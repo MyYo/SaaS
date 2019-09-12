@@ -27,23 +27,25 @@ camera.Init(0);
 %the class name and using the appropriate Set commands for the different
 %options, based on those available for the camera from the .Net manual
 camera.Display.Mode.Set(uc480.Defines.DisplayMode.DiB);
-camera.PixelFormat.Set(uc480.Defines.ColorMode.RGBA8Packed);
+camera.PixelFormat.Set(uc480.Defines.ColorMode.Mono8);
 camera.Trigger.Set(uc480.Defines.TriggerMode.Software);
-camera.Size.AOI.Set(0, 0, 1024, 1024);
+camera.Size.AOI.Set(0, 0, 512, 512);
 %pretend the desired Master gain is 57, based on the scale of 1-100
 Gfactor = 0;
 camera.Gain.Hardware.Factor.SetMaster(Gfactor);
 camera.Timing.Exposure.Set(0.3);
 
  
- 
 [~, MemId] = camera.Memory.Allocate(true);
 [~, Width, Height, Bits, ~] = camera.Memory.Inquire(MemId);
+
 camera.Acquisition.Freeze(uc480.Defines.DeviceParameter.Wait);
 [~, tmp] = camera.Memory.CopyToArray(MemId);
 Data = reshape(uint8(tmp), [Bits/8, Width, Height]);
-Data = Data(1:3, 1:Width, 1:Height);
+Data = Data(:, 1:Width, 1:Height);
 Data = permute(Data, [3,2,1]);
-himg = imshow(Data);
+
+
 camera.Exit;
+himg = imshow(Data);
 toc;
