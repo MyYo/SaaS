@@ -9,54 +9,52 @@ function control_main
     camera = uc480.Camera;
     camera.Init(0);
 
-    %getting information from the classes, first create an array for each of
-    %the values that make up the data structure with a temp as the first array 
-    %value, then include an array member for each value of interest (all others
-    %can be ~ if not used) making sure to name it something identifiable. Then 
-    %call the method of the class like below
-    [~, PosX, PosY, PixelWidth, PixelHeight] = GetOriginal(camera.Size.AOI);
-    [~, MasterGain] = GetMaster(camera.Gain.Hardware.Factor);
-    [~, CurrentFPS] = GetCurrentFps(camera.Timing.Framerate);
-    [~, FRMin, FRMax, FRInc] = GetFrameRateRange(camera.Timing.Framerate);
-    [~, ExpMin, ExpMax, ExpInc] = GetRange(camera.Timing.Exposure);
-
-
     %Setting the values you want for different options can be done by typing
     %the class name and using the appropriate Set commands for the different
     %options, based on those available for the camera from the .Net manual
     camera.Display.Mode.Set(uc480.Defines.DisplayMode.DiB);
-    camera.PixelFormat.Set(uc480.Defines.ColorMode.RGBA8Packed);
+    camera.PixelFormat.Set(uc480.Defines.ColorMode.Mono8);
     camera.Trigger.Set(uc480.Defines.TriggerMode.Software);
     camera.Size.AOI.Set(0, 0, 1024, 1024);
-    %pretend the desired Master gain is 57, based on the scale of 1-100
+    
     Gfactor = 0;
     camera.Gain.Hardware.Factor.SetMaster(Gfactor);
     camera.Timing.Exposure.Set(0.3);
     
-%     % allocate memory for image
-%     [~, MemId] = camera.Memory.Allocate(true);
-%     [~, Width, Height, Bits, ~] = camera.Memory.Inquire(MemId);
+    % allocate memory for image
+    [~, MemId] = camera.Memory.Allocate(true);
+    [~, Width, Height, Bits, ~] = camera.Memory.Inquire(MemId);
     
     t = timer;
     t.ExecutionMode = 'fixedRate';
-    t.Period = 5;
+    t.Period = 3;
     t.TasksToExecute = 10;
     t.TimerFcn = @get_image;
     start(t);
     camera.Exit;
 
     function get_image(~,~)
-        tic;
-        % allocate memory for image
-        [~, MemId] = camera.Memory.Allocate(true);
-        [~, Width, Height, Bits, ~] = camera.Memory.Inquire(MemId);
-        
+        tic;    
         camera.Acquisition.Freeze(uc480.Defines.DeviceParameter.Wait);
         [~, tmp] = camera.Memory.CopyToArray(MemId);
         Data = reshape(uint8(tmp), [Bits/8, Width, Height]);
-        Data = Data(1:3, 1:Width, 1:Height);
+        Data = Data(:, 1:Width, 1:Height);
         Data = permute(Data, [3,2,1]);
-        himg = imshow(Data);
+        
+        % find Gaussian center
+        coeffs = fmin_gaussian(Data, 1);
+        x = coeffs(1);
+        y = coeffs(2);
         toc;
+        
+        % plot 
+        himg = imshow(Data);
+        hold on;
+        plot(coeffs(1), coeffs(2), 'r.','MarkerSize', 10);
+        ang = 0:pi/64:2*pi;
+        r = 2*coeffs(3); % radius is 2 std devs
+        circle_x = r*cos(ang) + x;
+        circle_y = r*sin(ang) + y;
+        plot(circle_x, circle_y, 'r');
     end
 end
