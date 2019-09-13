@@ -1,5 +1,7 @@
 function control_main 
 
+    NumOfFrames = 10;
+
     NET.addAssembly('C:\Program Files\Thorlabs\Scientific Imaging\DCx Camera Support\Develop\DotNet\uc480DotNet.dll');
     import uc480.*;
     import uc480.Info.*;
@@ -25,36 +27,52 @@ function control_main
     [~, MemId] = camera.Memory.Allocate(true);
     [~, Width, Height, Bits, ~] = camera.Memory.Inquire(MemId);
     
+    % variables
+    Data = zeros(Width, Height, NumOfFrames);
+    coeffs = zeros(5, NumOfFrames);
+    FrameCount = 1;
+    
     t = timer;
     t.ExecutionMode = 'fixedRate';
-    t.Period = 3;
-    t.TasksToExecute = 10;
+    t.Period = 1;
+    t.TasksToExecute = NumOfFrames;
     t.TimerFcn = @get_image;
     start(t);
-    camera.Exit;
+    fprintf("FrameCount %d", FrameCount);
+    
+    if FrameCount > NumOfFrames
+        camera.Exit;
+        fprintf("finished.");
+
+        % plot 
+        figure;
+        himg = imshow(reshape(Data(:, :, 1), Width, Height));
+        hold on;
+        x = coeffs(1, 1);
+        y = coeffs(2, 1);
+        plot(x, y, 'r.','MarkerSize', 10);
+        ang = 0:pi/64:2*pi;
+        r = 2*coeffs(3, 1); % radius is 2 std devs
+
+        circle_x = r*cos(ang) + x;
+        circle_y = r*sin(ang) + y;
+        plot(circle_x, circle_y, 'r');
+    end
 
     function get_image(~,~)
         tic;    
         camera.Acquisition.Freeze(uc480.Defines.DeviceParameter.Wait);
         [~, tmp] = camera.Memory.CopyToArray(MemId);
-        Data = reshape(uint8(tmp), [Bits/8, Width, Height]);
-        Data = Data(:, 1:Width, 1:Height);
-        Data = permute(Data, [3,2,1]);
+        Image = reshape(uint8(tmp), [Bits/8, Width, Height]);
+        Image = Image(:, 1:Width, 1:Height);
+        Image = permute(Image, [3,2,1]);
+        Image = im2double(Image);
+        Data(:, :, FrameCount) = Image;
         
         % find Gaussian center
-        coeffs = fmin_gaussian(Data, 1);
-        x = coeffs(1);
-        y = coeffs(2);
+        coeff = fmin_gaussian(Image, 4);
+        coeffs(:, FrameCount) = coeff;
         toc;
-        
-        % plot 
-        himg = imshow(Data);
-        hold on;
-        plot(coeffs(1), coeffs(2), 'r.','MarkerSize', 10);
-        ang = 0:pi/64:2*pi;
-        r = 2*coeffs(3); % radius is 2 std devs
-        circle_x = r*cos(ang) + x;
-        circle_y = r*sin(ang) + y;
-        plot(circle_x, circle_y, 'r');
+        FrameCount = FrameCount + 1;
     end
 end
