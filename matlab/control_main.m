@@ -1,6 +1,6 @@
 function control_main 
 
-    NumOfFrames = 10;
+    NumOfFrames = 3;
 
     NET.addAssembly('C:\Program Files\Thorlabs\Scientific Imaging\DCx Camera Support\Develop\DotNet\uc480DotNet.dll');
     import uc480.*;
@@ -28,17 +28,17 @@ function control_main
     Data = zeros(Width, Height, NumOfFrames);
     coeffs = zeros(5, NumOfFrames);
     
-    r = rateControl(1); %1 Hz
+    freq = 2;
+    r = robotics.Rate(freq); %in Hz; only accurate up to 100 Hz
     reset(r)
     for i = 1:NumOfFrames
-        execute_loop(i);
         time = r.TotalElapsedTime;
+        execute_loop(i);
         fprintf('Iteration: %d - Time Elapsed: %f\n',i,time)
         waitfor(r);
     end
     
     camera.Exit;
-    fprintf("finished.");
 
     % plot 
     figure;
@@ -53,6 +53,13 @@ function control_main
     circle_x = r*cos(ang) + x;
     circle_y = r*sin(ang) + y;
     plot(circle_x, circle_y, 'r');
+    
+    
+    distances = coeffs(1, :);
+    t = 0:1/freq:NumOfFrames*(1/freq);
+    figure;
+    plot(t, distances);
+    
 
     function execute_loop(FrameCount)
         tic;  
