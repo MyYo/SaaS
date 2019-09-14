@@ -18,7 +18,7 @@ function control_main
     camera.Size.AOI.Set(0, 0, 1024, 1024);
     Gfactor = 0;
     camera.Gain.Hardware.Factor.SetMaster(Gfactor);
-    camera.Timing.Exposure.Set(0.3);
+    camera.Timing.Exposure.Set(0.5);
     
     % allocate memory for camera capture
     [~, MemId] = camera.Memory.Allocate(true);
@@ -44,8 +44,8 @@ function control_main
     figure;
     himg = imshow(reshape(Data(:, :, 1), Width, Height));
     hold on;
-    x = coeffs(1, 1);
-    y = coeffs(2, 1);
+    x = coeffs(1, 1)
+    y = coeffs(2, 1)
     plot(x, y, 'r.','MarkerSize', 10);
     ang = 0:pi/64:2*pi;
     r = 2*coeffs(3, 1); % radius is 2 std devs
@@ -56,7 +56,7 @@ function control_main
     
     
     distances = coeffs(1, :);
-    t = 0:1/freq:NumOfFrames*(1/freq);
+    t = 1/freq:1/freq:NumOfFrames*(1/freq);
     figure;
     plot(t, distances);
     
@@ -71,6 +71,7 @@ function control_main
         Image = Image(:, 1:Width, 1:Height);
         Image = permute(Image, [3,2,1]);
         Image = im2double(Image);
+        size(Image)
         
         % find Gaussian center
         coeff = fmin_gaussian(Image, 4);
