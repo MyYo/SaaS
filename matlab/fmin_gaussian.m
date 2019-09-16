@@ -27,5 +27,7 @@ end
 aBest = fminsearch(@(a)( sum(sum((f(a)-I).^2))),aInitial);
 aPrev = aBest;
 coeffs = aBest.*downsample_factor;
+result = sum(sum((f(aBest)-I).^2));
+disp(result);
 
 end
