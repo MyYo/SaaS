@@ -8,6 +8,9 @@ function control_main
     import uc480.Defines.*;
     import uc480.Types.*;
     
+    % set up translating stage
+    
+    
     camera = uc480.Camera;
     camera.Init(0);
 
