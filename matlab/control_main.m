@@ -1,6 +1,6 @@
 function control_main 
 
-    NumOfFrames = 3;
+    NumIter = 1;
 
     NET.addAssembly('C:\Program Files\Thorlabs\Scientific Imaging\DCx Camera Support\Develop\DotNet\uc480DotNet.dll');
     import uc480.*;
@@ -9,10 +9,15 @@ function control_main
     import uc480.Types.*;
     
     % set up translating stage
-    
+    device = init_stage();
+%     if isa(device, 'handle') && isvalid(device)
+%         fprintf("device is a handle object");
+%     end
     
     camera = uc480.Camera;
     camera.Init(0);
+    
+%     cleanupObj = onCleanup(@cleanup);
 
     % set camera parameters
     camera.Display.Mode.Set(uc480.Defines.DisplayMode.DiB);
@@ -28,27 +33,29 @@ function control_main
     [~, Width, Height, Bits, ~] = camera.Memory.Inquire(MemId);
     
     % allocate variables for data storage
-    Data = zeros(Width, Height, NumOfFrames);
-    coeffs = zeros(5, NumOfFrames);
+    Data = zeros(Width, Height, NumIter);
+    coeffs = zeros(5, NumIter);
     
+    
+    move_stage_at_vel(device, 1);
     freq = 2;
     r = robotics.Rate(freq); %in Hz; only accurate up to 100 Hz
     reset(r)
-    for i = 1:NumOfFrames
-        time = r.TotalElapsedTime;
+    for i = 1:NumIter
         execute_loop(i);
-        fprintf('Iteration: %d - Time Elapsed: %f\n',i,time)
         waitfor(r);
+        time = r.TotalElapsedTime;
+        fprintf('Iteration: %d - Time Elapsed: %f\n',i,time);
     end
-    
-    camera.Exit;
+    device.Stop(7e4)
+    cleanup();
 
     % plot 
     figure;
     himg = imshow(reshape(Data(:, :, 1), Width, Height));
     hold on;
-    x = coeffs(1, 1)
-    y = coeffs(2, 1)
+    x = coeffs(1, 1);
+    y = coeffs(2, 1);
     plot(x, y, 'r.','MarkerSize', 10);
     ang = 0:pi/64:2*pi;
     r = 2*coeffs(3, 1); % radius is 2 std devs
@@ -59,7 +66,7 @@ function control_main
     
     
     distances = coeffs(1, :);
-    t = 1/freq:1/freq:NumOfFrames*(1/freq);
+    t = 1/freq:1/freq:NumIter*(1/freq);
     figure;
     plot(t, distances);
     
@@ -74,7 +81,6 @@ function control_main
         Image = Image(:, 1:Width, 1:Height);
         Image = permute(Image, [3,2,1]);
         Image = im2double(Image);
-        size(Image)
         
         % find Gaussian center
         coeff = fmin_gaussian(Image, 4);
@@ -84,5 +90,13 @@ function control_main
         coeffs(:, FrameCount) = coeff;
         
         toc;
+    end
+
+    function cleanup()
+        fprintf("cleaning up connected devices...\n");
+        if isvalid(camera) && isvalid(device)
+            camera.Exit;
+            disconnect_stage(device);
+        end
     end
 end

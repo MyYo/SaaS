@@ -46,9 +46,9 @@ device.SetSettings(MotorDeviceSettings, true, false);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 device.StartPolling(250); % Units: [ms]
-pause(1); % Pause to ensure device is enabled
+pause(1); % Pause to ensure device is enabled  -- is this really necessary??
 
 % ***Home the motor before use***
-fprintf('Homing motor. . . . \n'); 
+fprintf('Homing motor... \n'); 
 device.Home(timeout_val);
 end
