@@ -51,5 +51,5 @@ pause(1); % Pause to ensure device is enabled  -- is this really necessary??
 % ***Home the motor before use***
 fprintf('Homing motor... \n'); 
 device.Home(timeout_val);
-device.MoveTo(20, timeout_val);
+device.MoveTo(16, timeout_val);
 end
