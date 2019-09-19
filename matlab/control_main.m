@@ -67,12 +67,21 @@ function control_main
 %         plot(circle_x, circle_y, 'r');
 %     end
     
-    distances = coeffs(1, :);
+    distances = coeffs(1, :)*0.005;
     t = 0:1/freq:(NumIter-1)*(1/freq);
+    p = polyfit(t, distances, 1);
+    best_fit_line = p(2)*t + p(1);
+    fprintf("Velocity of beam is: %f\n", p(2));
+    
     figure;
-    plot(t, distances);
-    figure;
+    subplot(2, 1, 1);
     plot(t, stage_positions);
+    ylabel('Stage Pos [mm]');
+    subplot(2, 1, 2);
+    plot(t, distances);
+    plot(t, best_fit_line);
+    ylabel('Beam Pos [mm]');
+    xlabel('Time [s]');
 
     function execute_loop(IterCount)
         tic;  
