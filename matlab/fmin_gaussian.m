@@ -20,7 +20,9 @@ persistent aPrev;
 if isempty(aPrev)
     i = find(I(:)==max(I(:)),1,'first');
     aInitial = [xx(i),yy(i), n/2, max(I(:)),min(I(:))];
+    fprintf("Using max as initial guess\n");
 else
+    fprintf("Using previous solution as initial guess\n");
     aInitial = aPrev;
 end
 

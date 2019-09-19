@@ -17,7 +17,7 @@ lens.dia = 25.4;
 lens.t_c = 2.4;
 lens.t_e = 2.0;
 
-d_cam = 580;
+d_cam = 600;
 d_lens = 50;
 y_max = 0.99*(lens.dia - (input_beam.width/2));
 y_min = 1.01*(0 + (input_beam.width/2));

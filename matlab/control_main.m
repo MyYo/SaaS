@@ -1,6 +1,6 @@
 function control_main 
 
-    NumIter = 1;
+    NumIter = 10;
 
     NET.addAssembly('C:\Program Files\Thorlabs\Scientific Imaging\DCx Camera Support\Develop\DotNet\uc480DotNet.dll');
     import uc480.*;
@@ -35,11 +35,12 @@ function control_main
     % allocate variables for data storage
     Data = zeros(Width, Height, NumIter);
     coeffs = zeros(5, NumIter);
+    stage_positions = zeros(NumIter);
     
     
     move_stage_at_vel(device, 1);
-    freq = 2;
-    r = robotics.Rate(freq); %in Hz; only accurate up to 100 Hz
+    freq = 1; % in Hz, only accurate up to 100 Hz
+    r = robotics.Rate(freq);
     reset(r)
     for i = 1:NumIter
         execute_loop(i);
@@ -47,31 +48,33 @@ function control_main
         time = r.TotalElapsedTime;
         fprintf('Iteration: %d - Time Elapsed: %f\n',i,time);
     end
-    device.Stop(7e4)
+    device.Stop(7e4);
     cleanup();
 
     % plot 
-    figure;
-    himg = imshow(reshape(Data(:, :, 1), Width, Height));
-    hold on;
-    x = coeffs(1, 1);
-    y = coeffs(2, 1);
-    plot(x, y, 'r.','MarkerSize', 10);
-    ang = 0:pi/64:2*pi;
-    r = 2*coeffs(3, 1); % radius is 2 std devs
-
-    circle_x = r*cos(ang) + x;
-    circle_y = r*sin(ang) + y;
-    plot(circle_x, circle_y, 'r');
-    
+%     for i = 1:NumIter
+%         figure;
+%         himg = imshow(reshape(Data(:, :, NumIter), Width, Height));
+%         hold on;
+%         x = coeffs(1, NumIter);
+%         y = coeffs(2, NumIter);
+%         plot(x, y, 'r.','MarkerSize', 10);
+%         ang = 0:pi/64:2*pi;
+%         r = 2*coeffs(3, NumIter); % radius is 2 std devs
+% 
+%         circle_x = r*cos(ang) + x;
+%         circle_y = r*sin(ang) + y;
+%         plot(circle_x, circle_y, 'r');
+%     end
     
     distances = coeffs(1, :);
-    t = 1/freq:1/freq:NumIter*(1/freq);
+    t = 0:1/freq:(NumIter-1)*(1/freq);
     figure;
     plot(t, distances);
-    
+    figure;
+    plot(t, stage_positions);
 
-    function execute_loop(FrameCount)
+    function execute_loop(IterCount)
         tic;  
         
         % capture image
@@ -86,14 +89,19 @@ function control_main
         coeff = fmin_gaussian(Image, 4);
         
         % store data
-        Data(:, :, FrameCount) = Image;
-        coeffs(:, FrameCount) = coeff;
+        Data(:, :, IterCount) = Image;
+        coeffs(:, IterCount) = coeff;
         
         toc;
+        
+        % record stage position
+        pos = System.Decimal.ToDouble(device.Position);
+        fprintf('The motor position is: %d \n',pos);
+        stage_positions(IterCount) = pos;
     end
 
     function cleanup()
-        fprintf("cleaning up connected devices...\n");
+        fprintf("Cleaning up connected devices...\n");
         if isvalid(camera) && isvalid(device)
             camera.Exit;
             disconnect_stage(device);
