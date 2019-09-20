@@ -16,18 +16,25 @@ y = 1:n;
 [xx,yy] = meshgrid(x,y);
 
 f = @(a) ((a(4)-a(5))*exp(-((xx-a(1)).^2+(yy-a(2)).^2)/(2*a(3)^2))+a(5));
-persistent aPrev;
-if isempty(aPrev)
-    i = find(I(:)==max(I(:)),1,'first');
-    aInitial = [xx(i),yy(i), n/2, max(I(:)),min(I(:))];
-    fprintf("Using max as initial guess\n");
-else
-    fprintf("Using previous solution as initial guess\n");
-    aInitial = aPrev;
-end
+
+
+% TEMPORARY
+i = find(I(:)==max(I(:)),1,'first');
+aInitial = [xx(i),yy(i), n/2, max(I(:)),min(I(:))];
+% TEMPORARY
+
+% persistent aPrev;
+% if isempty(aPrev)
+%     i = find(I(:)==max(I(:)),1,'first');
+%     aInitial = [xx(i),yy(i), n/2, max(I(:)),min(I(:))];
+%     fprintf("Using max as initial guess\n");
+% else
+%     fprintf("Using previous solution as initial guess\n");
+%     aInitial = aPrev;
+% end
 
 aBest = fminsearch(@(a)( sum(sum((f(a)-I).^2))),aInitial);
-aPrev = aBest;
+% aPrev = aBest;
 coeffs = aBest.*downsample_factor;
 % result = sum(sum((f(aBest)-I).^2));
 % disp(result);
