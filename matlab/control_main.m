@@ -38,9 +38,8 @@ function control_main
     coeffs = zeros(5, NumIter);
     stage_positions = zeros(NumIter);
     
-    
-    move_stage_at_vel(device, 1);
-    freq = 1; % in Hz, only accurate up to 100 Hz
+   
+    freq = 1.67; % in Hz, only accurate up to 100 Hz
     r = robotics.Rate(freq);
     reset(r)
     for i = 1:NumIter
@@ -68,7 +67,7 @@ function control_main
 %         plot(circle_x, circle_y, 'r');
 %     end
     
-    distances = coeffs(1, :)*0.00465;
+    distances = coeffs(1, :);
     t = 0:1/freq:(NumIter-1)*(1/freq);
     p = polyfit(t, distances, 1);
     best_fit_line = p(1)*t + p(2);
@@ -87,6 +86,7 @@ function control_main
     xlabel('Time [s]');
 
     function execute_loop(IterCount)
+        beam_des = 4;
         tic;  
         
         % capture image
@@ -98,18 +98,22 @@ function control_main
         Image = im2double(Image);
         
         % find Gaussian center
-        coeff = fmin_gaussian(Image, 4);
-        
-        % store data
-        Data(:, :, IterCount) = Image;
-        coeffs(:, IterCount) = coeff;
+        coeff = fmin_gaussian(Image, 4)*0.00465;
+        beam_pos = coeff(1);
         
         toc;
         
+        % store beam data
+        Data(:, :, IterCount) = Image;
+        coeffs(:, IterCount) = coeff;
+        
         % record stage position
-        pos = System.Decimal.ToDouble(device.Position);
-        fprintf('The motor position is: %d \n',pos);
-        stage_positions(IterCount) = pos;
+        stage_pos = System.Decimal.ToDouble(device.Position);
+        fprintf('The motor position is: %d \n',stage_pos);
+        stage_positions(IterCount) = stage_pos;
+        
+        vel = velocity_controller(beam_pos, beam_des, 2.4);
+        move_stage_at_vel(device, vel);
     end
 
     function cleanup()
@@ -119,4 +123,5 @@ function control_main
             disconnect_stage(device);
         end
     end
+
 end

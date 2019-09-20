@@ -1,7 +1,7 @@
 clear; close all; clc;
 
 % parameters
-input_beam.y = 1;
+input_beam.y = 0;
 input_beam.width = 1.8;
 % input_beam.theta_top = 0.000318;
 % input_beam.theta_bot = -0.000318;
@@ -21,11 +21,11 @@ d_cam = 600;
 d_lens = 50;
 y_max = 0.99*(lens.dia - (input_beam.width/2));
 y_min = 1.01*(0 + (input_beam.width/2));
-v_max = 100; % mm/s
+v_max = 2.4; % mm/s
     
 dT = 0.1;
 T = 10;
-delay = 1;
+delay = 0.7;
 
 t = 0:dT:T;
 N = length(t);
@@ -67,9 +67,9 @@ for i = 1:T/dT
     addpoints(an_input_theta, dT*i, input_theta);
     
     [y, beam_width] = simulate_ray(input_beam, lens, d_lens, d_cam, false, fh);
-%     y = y + 0.1*y*randn; % simulate noise
+    y = y + 0.1*y*randn; % simulate noise
     y_out(i) = y;
-    y_des = y_ramp(i);
+    y_des = y_step(i);
     addpoints(an_output_y, dT*i, y);
     addpoints(an_output_width, dT*i, beam_width*1000);
     addpoints(an_des_y, dT*i, y_des);
@@ -79,10 +79,15 @@ for i = 1:T/dT
     % input_beam.y = pos_pid_controller(y, y_des, y_max, y_min);
     
     % velocity control
-    if i == (uint8(delay*j/dT))
-        y_dot = vel_p_controller(y, y_des, v_max);
-        j = j+1;
+    if delay ~= 0
+        if i == (uint8(delay*j/dT))
+            y_dot = velocity_controller(y, y_des, v_max);
+            j = j+1;
+        end
+    else
+        y_dot = velocity_controller(y, y_des, v_max);
     end
+    
     v_in(i) = y_dot;
     input_beam.y = input_beam.y + y_dot*dT;
     addpoints(an_input_v, dT*i, y_dot);
@@ -110,29 +115,3 @@ function y = pos_pid_controller(y, y_des, y_max, y_min)
     end
 end
 
-function y_dot = vel_p_controller(y, y_des, v_max)
-    kp = -10;
-    kd = -1;
-    ki = -5;
-    
-    persistent error_sum
-    persistent last_error
-    if isempty(error_sum)
-        error_sum = 0;
-    end
-    if isempty(last_error)
-        last_error = 0;
-    end
-    
-    error = y_des - y;
-    error_sum = error_sum + error;
-    y_dot = kp*error + kd*(error - last_error) + ki*error_sum;
-    
-    if y_dot > v_max
-        y_dot = v_max; % cap @ max velocity
-        error_sum = error_sum - error; % anti-windup
-    elseif y_dot < -v_max
-        y_dot = -v_max;
-        error_sum = error_sum - error;
-    end
-end
