@@ -1,7 +1,8 @@
 function control_main 
     close all; clear; clc;
 
-    NumIter = 10;
+    NumIter = 50;
+    beam_des = 3.6;
 
     NET.addAssembly('C:\Program Files\Thorlabs\Scientific Imaging\DCx Camera Support\Develop\DotNet\uc480DotNet.dll');
     import uc480.*;
@@ -37,16 +38,17 @@ function control_main
     Data = zeros(Width, Height, NumIter);
     coeffs = zeros(5, NumIter);
     stage_positions = zeros(NumIter);
+    requested_velocities = zeros(NumIter);
     
    
-    freq = 1.67; % in Hz, only accurate up to 100 Hz
+    freq = 3; % in Hz, only accurate up to 100 Hz
     r = robotics.Rate(freq);
     reset(r)
     for i = 1:NumIter
         execute_loop(i);
         waitfor(r);
-        time = r.TotalElapsedTime;
-        fprintf('Iteration: %d - Time Elapsed: %f\n',i,time);
+%         time = r.TotalElapsedTime;
+%         fprintf('Iteration: %d - Time Elapsed: %f\n',i,time);
     end
     device.Stop(7e4);
     cleanup();
@@ -71,22 +73,26 @@ function control_main
     t = 0:1/freq:(NumIter-1)*(1/freq);
     p = polyfit(t, distances, 1);
     best_fit_line = p(1)*t + p(2);
-    fprintf("Velocity of beam is: %f\n", p(1));
+    fprintf('Velocity of beam is: %f\n', p(1));
     
+    desired_positions = ones(NumIter)*beam_des;
     figure;
-    subplot(2, 1, 1);
+    subplot(3, 1, 1);
     plot(t, stage_positions);
     ylabel('Stage Pos [mm]');
-    subplot(2, 1, 2);
+    subplot(3, 1, 2);
     hold on;
     plot(t, distances);
-    plot(t, best_fit_line);
-    legend('data', 'best fit');
+    plot(t, desired_positions);
     ylabel('Beam Pos [mm]');
+    
+    subplot(3, 1, 3);
+    plot(t, requested_velocities);
+    legend('data', 'best fit');
+    ylabel('Requested Stage Velocity [mm/s]');
     xlabel('Time [s]');
 
     function execute_loop(IterCount)
-        beam_des = 4;
         tic;  
         
         % capture image
@@ -101,10 +107,9 @@ function control_main
         coeff = fmin_gaussian(Image, 4)*0.00465;
         beam_pos = coeff(1);
         
-        toc;
         
         % store beam data
-        Data(:, :, IterCount) = Image;
+%         Data(:, :, IterCount) = Image;
         coeffs(:, IterCount) = coeff;
         
         % record stage position
@@ -114,14 +119,18 @@ function control_main
         
         vel = velocity_controller(beam_pos, beam_des, 2.4);
         move_stage_at_vel(device, vel);
+        requested_velocities(IterCount) = vel;
+        toc;
     end
 
     function cleanup()
-        fprintf("Cleaning up connected devices...\n");
+        fprintf('Cleaning up connected devices...\n');
         if isvalid(camera) && isvalid(device)
             camera.Exit;
             disconnect_stage(device);
         end
+        clear move_stage_at_vel;
+        clear velocity_controller;
     end
 
 end
