@@ -1,7 +1,7 @@
 function y_dot = velocity_controller(y, y_des, v_max)
-    kp = 10;
-    kd = 1;
-    ki = 5;
+    kp = -200;
+    kd = -100;
+    ki = -10;
     
     persistent error_sum
     persistent last_error
@@ -23,4 +23,5 @@ function y_dot = velocity_controller(y, y_des, v_max)
         y_dot = -v_max;
         error_sum = error_sum - error;
     end
+    last_error = error;
 end

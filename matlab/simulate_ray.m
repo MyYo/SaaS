@@ -1,6 +1,5 @@
 % paraxial ray simulation
-function [y_output, beam_width] = simulate_ray(input_beam, lens, d_lens, d_cam, approximation, fig)
-% tic;    
+function [y_output, beam_width] = simulate_ray(input_beam, lens, d_lens, d_cam, approximation, fig)   
 % fprintf('Input beam:\ny = %f\nbeam width = %f\nangular spread = %f\n\n', ...
 %     input_beam.y, input_beam.width, input_beam.theta_top - input_beam.theta_bot);
 
@@ -18,7 +17,6 @@ figure(fig);
 subplot(5, 2, [1 2 3 4]);
 cla;
 hold on;
-% axis equal;
 axis([0 d_lens+d_cam -100 100]);
 ys = linspace(y_top, y_bot);
 thetas = linspace(input_beam.theta_top, input_beam.theta_bot);
@@ -42,6 +40,7 @@ for i = 1:length(ys)
     M_spherical = [1, 0; -(lens.n-1)/(lens.n*lens.R), 1/lens.n];
     d = sqrt(lens.R^2-(lens.dia/2-y)^2) - (lens.R-lens.t_c);
     if y > lens.dia || y < 0 
+        fprintf('Error: ray not incident on lens\n');
         d = 0;
     end
     M_planar = [1, 0; 0, lens.n/1];
@@ -100,7 +99,6 @@ beam_width = y_top-y_bot;
 
 % fprintf('Output beam:\ny = %f\nbeam width = %f\nangular spread = %f\n\n', ...
 %     y_output, beam_width, theta_top-theta_bot);
-% toc;
 end
 
 

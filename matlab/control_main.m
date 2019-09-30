@@ -109,7 +109,7 @@ function control_main
         
         
         % store beam data
-%         Data(:, :, IterCount) = Image;
+        % Data(:, :, IterCount) = Image;
         coeffs(:, IterCount) = coeff;
         
         % record stage position
