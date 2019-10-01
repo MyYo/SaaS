@@ -2,7 +2,7 @@ function control_main
     close all; clear; clc;
 
     NumIter = 50;
-    beam_des = 3.6;
+    beam_des = 3.8;
 
     NET.addAssembly('C:\Program Files\Thorlabs\Scientific Imaging\DCx Camera Support\Develop\DotNet\uc480DotNet.dll');
     import uc480.*;
@@ -11,49 +11,49 @@ function control_main
     import uc480.Types.*;
     
     % set up translating stage
-    device = init_stage();
-%     if isa(device, 'handle') && isvalid(device)
-%         fprintf("device is a handle object");
-%     end
-    
+    device = init_stage(); % device and camera are both handle objects
     camera = uc480.Camera;
     camera.Init(0);
     
-%     cleanupObj = onCleanup(@cleanup);
+    try
+        % set camera parameters
+        camera.Display.Mode.Set(uc480.Defines.DisplayMode.DiB);
+        camera.PixelFormat.Set(uc480.Defines.ColorMode.Mono8);
+        camera.Trigger.Set(uc480.Defines.TriggerMode.Software);
+        camera.Size.AOI.Set(0, 0, 1024, 1024);
+        Gfactor = 0;
+        camera.Gain.Hardware.Factor.SetMaster(Gfactor);
+        camera.Timing.Exposure.Set(0.5);
 
-    % set camera parameters
-    camera.Display.Mode.Set(uc480.Defines.DisplayMode.DiB);
-    camera.PixelFormat.Set(uc480.Defines.ColorMode.Mono8);
-    camera.Trigger.Set(uc480.Defines.TriggerMode.Software);
-    camera.Size.AOI.Set(0, 0, 1024, 1024);
-    Gfactor = 0;
-    camera.Gain.Hardware.Factor.SetMaster(Gfactor);
-    camera.Timing.Exposure.Set(0.5);
-    
-    % allocate memory for camera capture
-    [~, MemId] = camera.Memory.Allocate(true);
-    [~, Width, Height, Bits, ~] = camera.Memory.Inquire(MemId);
-    
-    % allocate variables for data storage
-    Data = zeros(Width, Height, NumIter);
-    coeffs = zeros(5, NumIter);
-    stage_positions = zeros(NumIter);
-    requested_velocities = zeros(NumIter);
-    
-   
-    freq = 3; % in Hz, only accurate up to 100 Hz
-    r = robotics.Rate(freq);
-    reset(r)
-    for i = 1:NumIter
-        execute_loop(i);
-        waitfor(r);
-%         time = r.TotalElapsedTime;
-%         fprintf('Iteration: %d - Time Elapsed: %f\n',i,time);
+        % allocate memory for camera capture
+        [~, MemId] = camera.Memory.Allocate(true);
+        [~, Width, Height, Bits, ~] = camera.Memory.Inquire(MemId);
+
+        % allocate variables for data storage
+        Data = zeros(Width, Height, NumIter);
+        coeffs = zeros(5, NumIter);
+        stage_positions = zeros(NumIter);
+        requested_velocities = zeros(NumIter);
+
+
+        freq = 3; % in Hz, only accurate up to 100 Hz
+        r = robotics.Rate(freq);
+        reset(r)
+        for i = 1:NumIter
+            execute_loop(i);
+            waitfor(r);
+    %         time = r.TotalElapsedTime;
+    %         fprintf('Iteration: %d - Time Elapsed: %f\n',i,time);
+        end
+        device.Stop(7e4);
+    catch e
+        fprintf('Error moving stage... ');
+        cleanup();
+        rethrow(e);
     end
-    device.Stop(7e4);
     cleanup();
 
-    % plot 
+%     % plot 
 %     for i = 1:NumIter
 %         figure;
 %         himg = imshow(reshape(Data(:, :, NumIter), Width, Height));
@@ -124,13 +124,16 @@ function control_main
     end
 
     function cleanup()
-        fprintf('Cleaning up connected devices...\n');
+        fprintf('Cleaning up.\n');
         if isvalid(camera) && isvalid(device)
             camera.Exit;
             disconnect_stage(device);
         end
+        
+        % clear persistent variables on auxillary functions
         clear move_stage_at_vel;
         clear velocity_controller;
+        clear fmin_gaussian;
     end
 
 end

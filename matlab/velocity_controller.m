@@ -7,6 +7,7 @@ function y_dot = velocity_controller(y, y_des, v_max)
     persistent last_error
     if isempty(error_sum)
         error_sum = 0;
+        fprintf('empty\n');
     end
     if isempty(last_error)
         last_error = 0;
