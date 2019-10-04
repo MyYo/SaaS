@@ -1,4 +1,4 @@
-function device = init_stage()
+function device = init_stage(serial_num)
 %% INITIALIZE & CONNECT DEVICES
 % Execute the following sections sequentially and DO NOT call .StopPolling() 
 % or .Disconnect() until you are finished executing commands like .MoveTo()
@@ -23,19 +23,18 @@ DeviceManagerCLI.BuildDeviceList();
 DeviceManagerCLI.GetDeviceListSize();
 
 % ***Should change the serial number(s) below to those being used***
-serial_num1 = '27254054';
 timeout_val = 7e4; % Increased from 6e4 to facilitate full range of motion
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Set-up and connect to device(s), then configure
-device = KCubeDCServo.CreateKCubeDCServo(serial_num1);
-device.Connect(serial_num1);
+device = KCubeDCServo.CreateKCubeDCServo(serial_num);
+device.Connect(serial_num);
 device.WaitForSettingsInitialized(5000);
 %device.GetDCPIDParams(); % Not the PID params we need to adjust, yet.
 
 % Configure Stage 
 % (This is, apparently, necessary.  Will encounter strange errors if not executed.)
-motorSettings = device.LoadMotorConfiguration(serial_num1);
+motorSettings = device.LoadMotorConfiguration(serial_num);
 motorSettings.DeviceSettingsName = 'KDC101';
 % Update the RealToDeviceUnit converter
 motorSettings.UpdateCurrentConfiguration();

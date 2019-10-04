@@ -1,21 +1,37 @@
 function control_main 
     close all; clear; clc;
 
-    NumIter = 50;
-    beam_des = 3.8;
-
     NET.addAssembly('C:\Program Files\Thorlabs\Scientific Imaging\DCx Camera Support\Develop\DotNet\uc480DotNet.dll');
     import uc480.*;
     import uc480.Info.*;
     import uc480.Defines.*;
     import uc480.Types.*;
+        
+    % define paramters
+    NumIter = 50;
+    freq = 3; % in Hz, only accurate up to 100 Hz
+    r = robotics.Rate(freq);
     
-    % set up translating stage
-    device = init_stage(); % device and camera are both handle objects
-    camera = uc480.Camera;
-    camera.Init(0);
+    % define desired output
+    beam_des = 2.976; % mm, center of screen
+    desired_positions = ones(NumIter)*beam_des;
+    
+    % allocate variables for data storage
+    % Data = zeros(Width, Height, NumIter);
+    gauss_coeffs = zeros(5, NumIter);
+    stage_positions = zeros(NumIter);
+    requested_velocities = zeros(NumIter);
+    t = 0:1/freq:(NumIter-1)*(1/freq);
     
     try
+        % set up translating stage
+        fiber_stage = init_stage('27254054'); % stage and camera are both handle objects
+        lens_stage = init_stage('27254043');
+        camera_stage = init_stage('27505183');
+
+        camera = uc480.Camera;
+        camera.Init(0);
+    
         % set camera parameters
         camera.Display.Mode.Set(uc480.Defines.DisplayMode.DiB);
         camera.PixelFormat.Set(uc480.Defines.ColorMode.Mono8);
@@ -29,25 +45,20 @@ function control_main
         [~, MemId] = camera.Memory.Allocate(true);
         [~, Width, Height, Bits, ~] = camera.Memory.Inquire(MemId);
 
-        % allocate variables for data storage
-        Data = zeros(Width, Height, NumIter);
-        coeffs = zeros(5, NumIter);
-        stage_positions = zeros(NumIter);
-        requested_velocities = zeros(NumIter);
-
-
-        freq = 3; % in Hz, only accurate up to 100 Hz
-        r = robotics.Rate(freq);
         reset(r)
+        move_at_velocity(camera_stage, 0.1);
         for i = 1:NumIter
             execute_loop(i);
             waitfor(r);
-    %         time = r.TotalElapsedTime;
-    %         fprintf('Iteration: %d - Time Elapsed: %f\n',i,time);
+            % time = r.TotalElapsedTime;
+            % fprintf('Iteration: %d - Time Elapsed: %f\n',i,time);
         end
-        device.Stop(7e4);
+        camera_stage.Stop(7e4);
+        fiber_stage.Stop(7e4);
+        lens_stage.Stop(7e4);
+        
     catch e
-        fprintf('Error moving stage... ');
+        fprintf('Error encountered... ');
         cleanup();
         rethrow(e);
     end
@@ -69,27 +80,37 @@ function control_main
 %         plot(circle_x, circle_y, 'r');
 %     end
     
-    distances = coeffs(1, :);
-    t = 0:1/freq:(NumIter-1)*(1/freq);
-    p = polyfit(t, distances, 1);
-    best_fit_line = p(1)*t + p(2);
-    fprintf('Velocity of beam is: %f\n', p(1));
+    beam_centers = gauss_coeffs(1, :);
+    % p = polyfit(t, beam_centers, 1);
+    % best_fit_line = p(1)*t + p(2);
+    % fprintf('Velocity of beam is: %f\n', p(1));
     
-    desired_positions = ones(NumIter)*beam_des;
+    % calculate actual stage velocity
+    stage_velocities = zeros(NumIter);
+    for i = 2:NumIter
+        stage_velocities(i) = (stage_positions(i)-stage_positions(i-1))/dT;
+    end
+    
+    
     figure;
-    subplot(3, 1, 1);
-    plot(t, stage_positions);
-    ylabel('Stage Pos [mm]');
-    subplot(3, 1, 2);
+    subplot(4, 1, 1);
     hold on;
-    plot(t, distances);
+    plot(t, beam_centers);
     plot(t, desired_positions);
+    legend('actual', 'desired');
     ylabel('Beam Pos [mm]');
     
-    subplot(3, 1, 3);
+    subplot(4, 1, 2);
+    plot(t, stage_positions);
+    ylabel('Stage Pos [mm]');
+    
+    subplot(4, 1, 3);
     plot(t, requested_velocities);
-    legend('data', 'best fit');
     ylabel('Requested Stage Velocity [mm/s]');
+    
+    subplot(4, 1, 4);
+    plot(t, stage_velocities);
+    ylabel('Actual Stage Velocity [mm/s]');
     xlabel('Time [s]');
 
     function execute_loop(IterCount)
@@ -107,27 +128,35 @@ function control_main
         coeff = fmin_gaussian(Image, 4)*0.00465;
         beam_pos = coeff(1);
         
-        
         % store beam data
         % Data(:, :, IterCount) = Image;
-        coeffs(:, IterCount) = coeff;
+        gauss_coeffs(:, IterCount) = coeff;
         
         % record stage position
-        stage_pos = System.Decimal.ToDouble(device.Position);
+        stage_pos = System.Decimal.ToDouble(fiber_stage.Position);
         fprintf('The motor position is: %d \n',stage_pos);
         stage_positions(IterCount) = stage_pos;
         
         vel = velocity_controller(beam_pos, beam_des, 2.4);
-        move_stage_at_vel(device, vel);
+        move_stage_at_vel(fiber_stage, vel);
+        move_stage_at_vel(lens_stage, vel);
         requested_velocities(IterCount) = vel;
         toc;
     end
 
     function cleanup()
         fprintf('Cleaning up.\n');
-        if isvalid(camera) && isvalid(device)
+        if isvalid(camera)
             camera.Exit;
-            disconnect_stage(device);
+        end
+        if isvalid(fiber_stage)
+            disconnect_stage(fiber_stage);
+        end
+        if isvalid(lens_stage)
+            disconnect_stage(lens_stage);
+        end
+        if isvalid(camera_stage)
+            disconnect_stage(camera_stage);
         end
         
         % clear persistent variables on auxillary functions

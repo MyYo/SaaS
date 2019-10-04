@@ -24,7 +24,7 @@ v_max = 2.4; % mm/s
     
 dT = 0.1;
 T = 15;
-delay = 0.4;
+delay = 0.33;
 
 t = 0:dT:T;
 N = length(t);
@@ -32,7 +32,7 @@ y_in = zeros(N, 1);
 y_out = zeros(N, 1);
 v_in = zeros(N, 1);
 v_in(1) = 0;
-y_ramp = -0.5:-1/N:-1.5;
+y_ramp = -0.5:-1.5/N:-2;
 y_step = -1*ones(N, 1);
 
 fh = figure;
@@ -64,10 +64,10 @@ for i = 1:T/dT
     input_theta = (input_beam.theta_top + input_beam.theta_bot)/2;
     addpoints(an_input_theta, dT*i, input_theta);
     
-    [y, beam_width] = simulate_ray(input_beam, lens, d_lens, d_cam, false, fh);
+    [y, beam_width] = simulate_ray(input_beam, lens, d_lens, d_cam, true, fh);
     % y = y + 0.1*y*randn; % simulate noise
     y_out(i) = y;
-    y_des = y_step(i);
+    y_des = y_ramp(i);
     addpoints(an_output_y, dT*i, y);
     addpoints(an_output_width, dT*i, beam_width*1000);
     addpoints(an_des_y, dT*i, y_des);
@@ -99,7 +99,6 @@ for i = 1:T/dT
     elseif (y_dot-y_dot_prev)/dT < -a_max
         y_dot = y_dot_prev - a_max*dT;
     end
-    
     
     v_in(i) = y_dot;
     input_beam.y = input_beam.y + y_dot*dT;

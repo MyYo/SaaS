@@ -1,7 +1,8 @@
 function y_dot = velocity_controller(y, y_des, v_max)
-    kp = -200;
-    kd = -100;
+    kp = -50;
+    kd = -120;
     ki = -10;
+    % gains negative for simulation, positive for experiment
     
     persistent error_sum
     persistent last_error
