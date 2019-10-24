@@ -1,7 +1,7 @@
 clear; close all; clc;
 
 % parameters
-input_beam.y = 1;
+input_beam.y = 3;
 input_beam.width = 1.8;
 % input_beam.theta_top = 0.000318;
 % input_beam.theta_bot = -0.000318;
@@ -16,7 +16,7 @@ lens.dia = 25.4;
 lens.t_c = 2.4;
 lens.t_e = 2.0;
 
-d_cam = 600;
+d_cam = 1600;
 d_lens = 50;
 y_max = 0.99*(lens.dia - (input_beam.width/2));
 y_min = 1.01*(0 + (input_beam.width/2));
@@ -24,7 +24,7 @@ v_max = 2.4; % mm/s
     
 dT = 0.1;
 T = 15;
-delay = 0.33;
+delay = 0.3;
 
 t = 0:dT:T;
 N = length(t);
@@ -32,8 +32,8 @@ y_in = zeros(N, 1);
 y_out = zeros(N, 1);
 v_in = zeros(N, 1);
 v_in(1) = 0;
-y_ramp = -0.5:-1.5/N:-2;
-y_step = -1*ones(N, 1);
+y_ramp = -4.5:-1.5/N:-6;
+y_step = -3*ones(N, 1);
 
 fh = figure;
 subplot(5, 2, 5);
