@@ -8,7 +8,7 @@ function control_main
     import uc480.Types.*;
         
     % define paramters
-    NumIter = 50;
+    NumIter = 100;
     freq = 3; % in Hz, only accurate up to 100 Hz
     r = robotics.Rate(freq);
     
@@ -17,17 +17,17 @@ function control_main
     desired_positions = ones(NumIter)*beam_des;
     
     % allocate variables for data storage
-    % Data = zeros(Width, Height, NumIter);
     gauss_coeffs = zeros(5, NumIter);
     stage_positions = zeros(NumIter);
     requested_velocities = zeros(NumIter);
-    t = 0:1/freq:(NumIter-1)*(1/freq);
+    dT = 1/freq;
+    t = 0:dT:(NumIter-1)*dT;
     
     try
         % set up translating stage
-        fiber_stage = init_stage('27254054'); % stage and camera are both handle objects
-        lens_stage = init_stage('27254043');
-        camera_stage = init_stage('27505183');
+        fiber_stage = init_stage('27254054', 1); % stage and camera are both handle objects
+%         lens_stage = init_stage('27254043', 0);
+%         camera_stage = init_stage('27505183', 16);
 
         camera = uc480.Camera;
         camera.Init(0);
@@ -39,23 +39,25 @@ function control_main
         camera.Size.AOI.Set(0, 0, 1024, 1024);
         Gfactor = 0;
         camera.Gain.Hardware.Factor.SetMaster(Gfactor);
-        camera.Timing.Exposure.Set(0.5);
+        camera.Timing.Exposure.Set(2);
 
         % allocate memory for camera capture
         [~, MemId] = camera.Memory.Allocate(true);
         [~, Width, Height, Bits, ~] = camera.Memory.Inquire(MemId);
+        Data = zeros(Width, Height, NumIter);
+
 
         reset(r)
-        move_at_velocity(camera_stage, 0.1);
+%         move_stage_at_vel(camera_stage, 0.1);
         for i = 1:NumIter
             execute_loop(i);
             waitfor(r);
             % time = r.TotalElapsedTime;
             % fprintf('Iteration: %d - Time Elapsed: %f\n',i,time);
         end
-        camera_stage.Stop(7e4);
+%         camera_stage.Stop(7e4);
         fiber_stage.Stop(7e4);
-        lens_stage.Stop(7e4);
+%         lens_stage.Stop(7e4);
         
     catch e
         fprintf('Error encountered... ');
@@ -64,23 +66,24 @@ function control_main
     end
     cleanup();
 
-%     % plot 
+    % plot 
+%     imwrite(Data(:, :, 1), 'realtime.bmp');
 %     for i = 1:NumIter
 %         figure;
-%         himg = imshow(reshape(Data(:, :, NumIter), Width, Height));
+%         imshow(reshape(Data(:, :, NumIter), Width, Height));
 %         hold on;
-%         x = coeffs(1, NumIter);
-%         y = coeffs(2, NumIter);
+%         x = gauss_coeffs(1, NumIter);
+%         y = gauss_coeffs(2, NumIter);
 %         plot(x, y, 'r.','MarkerSize', 10);
 %         ang = 0:pi/64:2*pi;
-%         r = 2*coeffs(3, NumIter); % radius is 2 std devs
+%         r = 2*gauss_coeffs(3, NumIter); % radius is 2 std devs
 % 
 %         circle_x = r*cos(ang) + x;
 %         circle_y = r*sin(ang) + y;
 %         plot(circle_x, circle_y, 'r');
 %     end
     
-    beam_centers = gauss_coeffs(1, :);
+    beam_centers = gauss_coeffs(1, :)*0.00465;
     % p = polyfit(t, beam_centers, 1);
     % best_fit_line = p(1)*t + p(2);
     % fprintf('Velocity of beam is: %f\n', p(1));
@@ -125,11 +128,11 @@ function control_main
         Image = im2double(Image);
         
         % find Gaussian center
-        coeff = fmin_gaussian(Image, 4)*0.00465;
-        beam_pos = coeff(1);
+        coeff = fmin_gaussian(Image, 4);
+        beam_pos = coeff(1)*0.00465;
         
         % store beam data
-        % Data(:, :, IterCount) = Image;
+        Data(:, :, IterCount) = Image;
         gauss_coeffs(:, IterCount) = coeff;
         
         % record stage position
@@ -139,23 +142,23 @@ function control_main
         
         vel = velocity_controller(beam_pos, beam_des, 2.4);
         move_stage_at_vel(fiber_stage, vel);
-        move_stage_at_vel(lens_stage, vel);
+%         move_stage_at_vel(lens_stage, vel);
         requested_velocities(IterCount) = vel;
         toc;
     end
 
     function cleanup()
         fprintf('Cleaning up.\n');
-        if isvalid(camera)
+        if exist('camera', 'var')
             camera.Exit;
         end
-        if isvalid(fiber_stage)
+        if exist('fiber_stage', 'var')
             disconnect_stage(fiber_stage);
         end
-        if isvalid(lens_stage)
+        if exist('lens_stage', 'var')
             disconnect_stage(lens_stage);
         end
-        if isvalid(camera_stage)
+        if exist('camera_stage', 'var')
             disconnect_stage(camera_stage);
         end
         

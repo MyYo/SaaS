@@ -12,7 +12,7 @@ if downsample_factor > 1
     I = I_ds;
 end
 x = 1:n;
-y = 1:n;
+y = 1:n; 
 [xx,yy] = meshgrid(x,y);
 
 f = @(a) ((a(4)-a(5))*exp(-((xx-a(1)).^2+(yy-a(2)).^2)/(2*a(3)^2))+a(5));
@@ -20,7 +20,8 @@ f = @(a) ((a(4)-a(5))*exp(-((xx-a(1)).^2+(yy-a(2)).^2)/(2*a(3)^2))+a(5));
 
 % TEMPORARY
 i = find(I(:)==max(I(:)),1,'first');
-aInitial = [xx(i),yy(i), n/2, max(I(:)),min(I(:))];
+% aInitial = [xx(i),yy(i), n/2, max(I(:)),min(I(:))];
+aInitial = [xx(i), yy(i), n, max(I(:)),min(I(:))];
 % TEMPORARY
 
 % persistent aPrev;

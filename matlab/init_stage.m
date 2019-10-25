@@ -1,4 +1,4 @@
-function device = init_stage(serial_num)
+function device = init_stage(serial_num, init_pos)
 %% INITIALIZE & CONNECT DEVICES
 % Execute the following sections sequentially and DO NOT call .StopPolling() 
 % or .Disconnect() until you are finished executing commands like .MoveTo()
@@ -50,5 +50,5 @@ pause(1); % Pause to ensure device is enabled  -- is this really necessary??
 % ***Home the motor before use***
 fprintf('Homing motor... \n'); 
 device.Home(timeout_val);
-device.MoveTo(16, timeout_val);
+device.MoveTo(init_pos, timeout_val);
 end

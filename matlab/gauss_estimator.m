@@ -2,9 +2,9 @@ clc; close all; clear;
 n = 1024;
 noise = 0.5*rand(n);
 % I = exp(-((xx-690).^2+(yy-530).^2)./(20000))+noise;
-I = im2double(imread('test_img2.bmp'));
+I = im2double(imread('realtime.bmp'));
 I = I(1:n, 1:n);
-coeffs = fmin_gaussian(I, 16);
+coeffs = fmin_gaussian(I, 4);
 
 figure;
 imshow(I);
