@@ -8,26 +8,28 @@ function control_main
     import uc480.Types.*;
         
     % define paramters
-    NumIter = 100;
+    NumIter = 50; 
     freq = 3; % in Hz, only accurate up to 100 Hz
     r = robotics.Rate(freq);
     
     % define desired output
     beam_des = 2.976; % mm, center of screen
-    desired_positions = ones(NumIter)*beam_des;
+%     desired_positions = ones(NumIter)*beam_des;
     
     % allocate variables for data storage
-    gauss_coeffs = zeros(5, NumIter);
-    stage_positions = zeros(NumIter);
-    requested_velocities = zeros(NumIter);
+%     gauss_coeffs = zeros(5, NumIter);
+    stage_positions = zeros(NumIter, 1);
+    requested_velocities = zeros(NumIter, 1);
+    target_positions = zeros(NumIter, 1);
+    beam_positions = zeros(NumIter, 1);
     dT = 1/freq;
     t = 0:dT:(NumIter-1)*dT;
     
     try
         % set up translating stage
-        fiber_stage = init_stage('27254054', 1); % stage and camera are both handle objects
+        fiber_stage = init_stage('27254054', 5); % stage and camera are both handle objects
 %         lens_stage = init_stage('27254043', 0);
-%         camera_stage = init_stage('27505183', 16);
+        camera_stage = init_stage('27505183', 20);
 
         camera = uc480.Camera;
         camera.Init(0);
@@ -44,7 +46,7 @@ function control_main
         % allocate memory for camera capture
         [~, MemId] = camera.Memory.Allocate(true);
         [~, Width, Height, Bits, ~] = camera.Memory.Inquire(MemId);
-        Data = zeros(Width, Height, NumIter);
+%         Data = zeros(Width, Height, NumIter);
 
 
         reset(r)
@@ -83,7 +85,7 @@ function control_main
 %         plot(circle_x, circle_y, 'r');
 %     end
     
-    beam_centers = gauss_coeffs(1, :)*0.00465;
+    % beam_centers = gauss_coeffs(1, :)*0.00465;
     % p = polyfit(t, beam_centers, 1);
     % best_fit_line = p(1)*t + p(2);
     % fprintf('Velocity of beam is: %f\n', p(1));
@@ -98,8 +100,8 @@ function control_main
     figure;
     subplot(4, 1, 1);
     hold on;
-    plot(t, beam_centers);
-    plot(t, desired_positions);
+    plot(t, beam_positions);
+    plot(t, target_positions);
     legend('actual', 'desired');
     ylabel('Beam Pos [mm]');
     
@@ -132,9 +134,14 @@ function control_main
         beam_pos = coeff(1)*0.00465;
         
         % store beam data
-        Data(:, :, IterCount) = Image;
-        gauss_coeffs(:, IterCount) = coeff;
+%         Data(:, :, IterCount) = Image;
+%         gauss_coeffs(:, IterCount) = coeff;
         
+        % record target position
+        target_pos = System.Decimal.ToDouble(camera_stage.Position);
+        target_positions(IterCount) = target_pos;
+        beam_positions(IterCount) = target_pos-beam_des+beam_pos;
+      
         % record stage position
         stage_pos = System.Decimal.ToDouble(fiber_stage.Position);
         fprintf('The motor position is: %d \n',stage_pos);

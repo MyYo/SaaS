@@ -19,25 +19,25 @@ f = @(a) ((a(4)-a(5))*exp(-((xx-a(1)).^2+(yy-a(2)).^2)/(2*a(3)^2))+a(5));
 
 
 % TEMPORARY
-i = find(I(:)==max(I(:)),1,'first');
+% i = find(I(:)==max(I(:)),1,'first');
 % aInitial = [xx(i),yy(i), n/2, max(I(:)),min(I(:))];
-aInitial = [xx(i), yy(i), n, max(I(:)),min(I(:))];
+% aInitial = [xx(i), yy(i), n, max(I(:)),min(I(:))];
 % TEMPORARY
 
-% persistent aPrev;
-% if isempty(aPrev)
-%     i = find(I(:)==max(I(:)),1,'first');
-%     aInitial = [xx(i),yy(i), n/2, max(I(:)),min(I(:))];
-%     fprintf("Using max as initial guess\n");
-% else
-%     fprintf("Using previous solution as initial guess\n");
-%     aInitial = aPrev;
-% end
+persistent aPrev;
+if isempty(aPrev)
+    i = find(I(:)==max(I(:)),1,'first');
+    aInitial = [xx(i),yy(i), n/2, max(I(:)),min(I(:))];
+    fprintf("Using max as initial guess\n");
+else
+    aInitial = aPrev;
+end
 
-aBest = fminsearch(@(a)( sum(sum((f(a)-I).^2))),aInitial);
-% aPrev = aBest;
+[aBest, ~, exitflag] = fminsearch(@(a)( sum(sum((f(a)-I).^2))),aInitial);
+if exitflag <= 0 % no solution found
+    aBest = aPrev;
+end
 coeffs = aBest.*downsample_factor;
-% result = sum(sum((f(aBest)-I).^2));
-% disp(result);
+aPrev = aBest;
 
 end
